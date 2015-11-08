@@ -186,3 +186,143 @@
   (if (= b 0)
       a
       (gcd/euler b (remainder a b))))
+
+; Smallest Divisor - O(sqrt(N))
+(define (smallest-divisor n)
+  (define (find-divisor test-divisor)
+    (cond ((> (square test-divisor) n) n)
+          ((zero? (remainder n test-divisor)) test-divisor)
+          ((= test-divisor 2) (find-divisor 3))
+          (else (find-divisor (+ test-divisor 2)))))
+  (find-divisor 2))
+    
+; Prime? if (smallest-divisor n) = n
+(define (prime? n)
+  (if (= n 1)
+      #f
+      (= (smallest-divisor n) n)))
+
+; a^p(mod p)
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp) (remainder (square (expmod base (/ exp 2) m)) m))
+        (else (remainder (* base (expmod base (- exp 1) m)) m))))
+
+; Fermat's primality test
+; Lookout for carmichael numbers (very rare) which are anomalies for Fermat's test
+(define (prime/fermat? n)
+  (cond
+    ((= n 2) #t)
+    (else (= (expmod 2 n n) 2))))
+
+
+;; Cube
+(define cube (lambda (x) (* x x x)))
+(define identity (lambda (x) x))
+;; Number sum
+(define (sum-integer a b)
+  (sum-gen a inc b identity))
+
+;; Square sum
+(define (sum-square a b)
+  (sum-gen a inc b square))
+
+;; 1/n*(n+2) Sum
+(define (pi-sum a b)
+  (define (pi-term x)
+    (/ 1.0 (* x (+ x 2))))
+  (define (pi-next x) (+ x 4))
+  (sum-gen a pi-next b pi-term)) 
+
+;; Increment by 1
+(define (inc n) (+ 1 n))
+
+;; General Sum
+(define (sum-gen a next b term)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum-gen (next a) next b term))))
+
+;; General Sum (Iteration)
+(define (sum-gen/iter a next b term)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ result (term a)))))
+  (iter a 0))
+
+;; Integral
+(define (integral f a b dx)
+  (define (add-dx x)
+    (+ x dx))
+  (* (sum-gen (+ a (/ dx 2.0)) add-dx b f) dx))
+
+
+;; Simpson's Integration
+(define (integral/simpson f a b n)
+  (define h (/ (- b a) n))
+  (define (next x) (+ x (* 2 h)))
+  (* (+ (f a) (* 2 (sum-gen (+ a (* 2 h)) next (- b (* 2 h)) f)) (* 4 (sum-gen (+ a h) next (- b h) f)) (f b)) (/ h 3.0)))
+
+;; Wallis Product : (n =: 1->infinity) : (2n/(2n-1))*(2n/(2n+1)) = pi/2
+(define (wallis n)
+  (* (/ (* 2 n) (- (* 2 n) 1)) (/ (* 2 n) (+ (* 2 n) 1))))
+
+(define (wallis-product a b)
+  (product-gen a inc b wallis))
+
+;; General Product
+(define (product-gen a next b term)
+  (if (> a b)
+      1
+      (* (term a)
+         (product-gen (next a) next b term))))
+
+
+;; General Product (Iteration)
+(define (product-gen/iter a next b term)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* result (term a)))))
+  (iter a 1))
+
+;; Accumulate : Higher order procedure for sum and product
+(define (accumulate combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (combiner (term a)
+                (accumulate combiner null-value term (next a) next b))))
+
+;; Accumulate/Iteration : Higher order procedure for sum and product
+(define (accumulate/iter combiner null-value term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (combiner result (term a)))))
+  (iter a null-value))
+
+;; Filtered Accumulate : Higher order procedure for accumulate
+(define (filtered-accumulate filter? combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (combiner (if (filter? a) (term a) null-value)
+                (filtered-accumulate filter? combiner null-value term (next a) next b))))
+
+;; sum of prime numbers between [a,b]
+(define (sum-of-primes a b)
+  (filtered-accumulate prime? + 0 identity a inc b))
+
+;; sum of numbers below n with G.C.D(x,n) = 1
+(define (sum-of-coprimes n)
+  (define (coprime? x)
+    (= (gcd/euler x n) 1))
+  (filtered-accumulate coprime? + 0 identity 1 inc n))
+
+(define (unity x) 1)
+
+;; Observation from prime-avg is that on an average as 'n'
+;; becomes large prime-avg tends to move towards normal average.
+(define (prime-avg n)
+  (/ (filtered-accumulate prime? + 0 identity 1 inc n) (filtered-accumulate prime? + 0 unity 1 inc n)))
