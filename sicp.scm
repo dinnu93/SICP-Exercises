@@ -254,9 +254,7 @@
 
 ;; Integral
 (define (integral f a b dx)
-  (define (add-dx x)
-    (+ x dx))
-  (* (sum-gen (+ a (/ dx 2.0)) add-dx b f) dx))
+  (* (sum-gen (+ a (/ dx 2.0)) (lambda (x) (+ x dx)) b f) dx))
 
 
 ;; Simpson's Integration
@@ -314,15 +312,157 @@
 (define (sum-of-primes a b)
   (filtered-accumulate prime? + 0 identity a inc b))
 
-;; sum of numbers below n with G.C.D(x,n) = 1
-(define (sum-of-coprimes n)
-  (define (coprime? x)
-    (= (gcd/euler x n) 1))
-  (filtered-accumulate coprime? + 0 identity 1 inc n))
+;; product of prime numbers between [a,b]
+(define (product-of-primes n)
+  (filtered-accumulate prime? * 1 identity 1 inc n))
+
+;; product of numbers below n with G.C.D(x,n) = 1
+(define (product-of-coprimes n)
+  (filtered-accumulate (lambda (x) (= (gcd/euler x n) 1)) * 1 identity 1 inc n))
+ 
 
 (define (unity x) 1)
 
 ;; Observation from prime-avg is that on an average as 'n'
 ;; becomes large prime-avg tends to move towards normal average.
-(define (prime-avg n)
-  (/ (filtered-accumulate prime? + 0 identity 1 inc n) (filtered-accumulate prime? + 0 unity 1 inc n)))
+(define (prime-sum n)
+  (filtered-accumulate prime? + 0 square 1 inc n))
+
+(define (sine x)
+  (define (term n)
+    (/ (* (exponent -1 (+ n 1)) (exponent x (- (* 2 n) 1))) (factorial (- (* 2 n) 1))))
+  (accumulate + 0 term 1 inc 10))
+
+;; pi = 3.1416...
+(define pi (* 2 (wallis-product 1 2000)))
+
+;; for-each
+(define (show-list lst)
+  (for-each display lst))
+
+(define (f x y)
+  (let ((a (+ 1 (* x y)))
+        (b (- 1 y)))
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+
+(define (fixed-point f first-guess)
+  (define tolerance 0.00001)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+
+(define (sqrt/fixed x)
+  (fixed-point (lambda (y) (average y (/ x y))) 1.0))
+
+
+
+(define (phi start) (fixed-point (lambda (x) (+ 1 (/ 1 x))) start))
+
+;; x**x = 1000 soln.
+(define (hyper-power start)
+  (fixed-point (lambda (x) (* 3 (/ (log 10) (log x)))) start))
+
+;; Continued-Fractions
+(define (cont-frac n d k)
+  (define (cont-frac/aux i)
+    (if (= i k)
+        (/ (n k) (d k))
+        (/ (n i) (+ (d i) (cont-frac/aux (+ i 1))))))
+  (cont-frac/aux 1))
+        
+  
+;; Continued-Fractions/iter
+(define (cont-frac/iter n d k)
+  (define (iter i Num Den)
+    (if (= i 1)
+        (/ Num Den)
+        (iter (- i 1) (n (- i 1)) (+ (d (- i 1)) (/ Num Den)))))
+  (iter k (n k) (d k)))
+
+(define (aux x)
+  (let ((r (remainder x 3)))
+    (if (or (= r 0) (= r 1))
+        1
+        (* 2 (+ 1 (quotient x 3))))))
+   
+(define e (+ 2 (cont-frac/iter unity aux 20)))
+
+(define (tan-cf x k)
+  (cont-frac/iter   (lambda (n) (if (= n 1) x (* -1 (square x)))) (lambda (x) (- (* 2 x) 1)) k)
+  )
+
+;; Procedures Returning Procedures
+
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+
+(define (sqrt/damp x)
+  (fixed-point (average-damp (lambda (y) (/ x y))) 1.0))
+  
+(define (cube-root x)
+  (fixed-point (average-damp (lambda (y) (/ x (square y)))) 1.0))
+
+;; Derivative of a function
+(define (deriv g)
+  (define dx 0.0001)
+  (lambda (x) (/ (- (g (+ x dx)) (g x)) dx)))
+
+;; Newton-Raphson method : g is any function
+(define (newton-transform g)
+  (lambda (x) (- x (/ (g x) ((deriv g) x)))))
+
+(define (newtons-method g guess)
+  (fixed-point (newton-transform g) guess))
+
+(define (sqrt/newton x)
+  (newtons-method (lambda (y) (- (square y) x)) 1.0))
+
+;; General procedure from abstracting all out
+(define (fixed-point-of-transform g transform guess)
+  (fixed-point (transform g) guess))
+
+(define (sqrt-general-average-damp x)
+    (fixed-point-of-transform (lambda (y) (/ x y)) average-damp 1.0))
+
+(define (sqrt-general-newton-transform x)
+    (fixed-point-of-transform (lambda (y) (- (square y) x)) newton-transform 1.0))
+
+;; cubic equation solution x**3 + a*x**2 + b*x + c
+(define (cubic a b c)
+  (lambda (x) (+ (cube x)
+                 (* a (square x))
+                 (* b x)
+                 c)))
+
+(define (cubic-root a b c)
+  (newtons-method (cubic a b c) 1.0))
+
+;; double
+(define (double f)
+  (lambda (x) (f (f x))))
+
+(define (compose f g)
+  (lambda (x) (f (g x))))
+
+(define (repeated f n)
+  (if (= n 1)
+      f
+      (compose f (repeated f (- n 1)))))
+
+(define (smooth f)
+  (define dx 0.0001)
+  (lambda (x)
+    (/ (+ (f (- x dx)) (f x) (f (+ x dx))) 3)))
+
+(define (n-fold-smooth f n)
+  ((repeated smooth n) f))
+  
+(define (nth-root/gen x n)
+  (fixed-point ((repeated average-damp (floor (/ (log x) (log 2)))) (lambda (y) (/ x (expt y (- n 1))))) 1.0))
