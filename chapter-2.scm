@@ -1,3 +1,4 @@
+
 ;;; Rational numbers data abstraction implementation (Constructor)
 
 (define (make-rat num den)
@@ -144,4 +145,72 @@
 (define (cdr/int c)
   (highest-power-of-n c 3))
 
-;;; 
+;;; Church's numerals
+
+(define zero
+  (lambda (f) (lambda (x) x)))
+
+(define (add-1 n)
+  (lambda (f) (lambda (x) (f ((n f) x)))))
+
+;; From substitution model
+
+(define one
+  (lambda (f) (lambda (x) (f x))))
+
+(define two
+  (lambda (f) (lambda (x) (f (f x)))))
+
+(define (add m n)
+  (lambda (f) (lambda (x) ((m f) ((n f) x)))))
+
+;;; Defining Interval Arthimetic
+
+(define (make-interval a b)
+  (cons a b))
+
+(define (lower-bound interval)
+  (car interval))
+
+(define (upper-bound interval)
+  (cdr interval))
+
+(define (add-interval x y)
+  (make-interval (+ (lower-bound x) (lower-bound y))
+                 (+ (upper-bound x) (upper-bound y))))
+
+(define (mul-interval x y)
+  (let (
+        (p1 (* (lower-bound x) (lower-bound y)))
+        (p2 (* (lower-bound x) (upper-bound y)))
+        (p3 (* (upper-bound x) (lower-bound y)))
+        (p4 (* (upper-bound x) (upper-bound y))))
+    (make-interval (min p1 p2 p3 p4)
+                   (max p1 p2 p3 p4))))
+
+(define (div-interval x y)
+  (mul-interval x
+                (if (or (= (upper-bound y) 0) (= (lower-bound y) 0))
+                    (display "Error: Interval spans over 0")
+                    (make-interval (/ 1.0 (upper-bound y))
+                                   (/ 1.0 (lower-bound y))))))
+
+(define (sub-interval x y)
+  (add-interval x
+                (make-interval (* -1 (upper-bound y))
+                               (* -1 (lower-bound y)))))
+                                    
+
+
+
+;;; Lists
+(define (last-pair lst)
+  (if (null? (cdr lst))
+      lst
+      (last-pair (cdr lst))))
+
+
+
+(define l1 (list 1 2 3 4))
+
+      
