@@ -1,4 +1,5 @@
 
+
 ;;; Rational numbers data abstraction implementation (Constructor)
 
 (define (make-rat num den)
@@ -209,8 +210,218 @@
       lst
       (last-pair (cdr lst))))
 
+(define (list-ref lst n)
+  (if (= n 0)
+      (car lst)
+      (list-ref (cdr lst) (- n 1))))
+    
 
+(define (reverse-list lst)
+  (define (loop acc ls)
+    (if (null? ls)
+	acc
+	(loop (cons (car ls) acc) (cdr ls))))
+  (loop '() lst))
 
-(define l1 (list 1 2 3 4))
+;; Method to deal with arbitrary number of arguments
+
+(define (same-parity x . y)
+  (define (parity? k) (= (remainder k 2) (remainder x 2)))
+  (define (loop ls)
+    (if (null? ls)
+	'()
+	(if (parity? (car ls))
+	    (cons (car ls) (loop (cdr ls)))
+	    (loop (cdr ls))
+	)))
+  (cons x (loop y)))
+
+;;; Scale list
+
+(define (scale-list items factor)
+  (if (null? items)
+      '()
+      (cons (* (car items) factor) (scale-list (cdr items) factor))))
+
+;; Map general procedure for list transforms
+;;   Scheme has a much more general procedure named map.
+;;   which works with arbitrary number of list arguments
+(define (map proc items)
+  (if (null? items)
+      '()
+      (cons (proc (car items)) (map proc (cdr items)))))
+
+;; Scale list in terms of map function
+
+(define (scale-list/map items factor)
+  (map (lambda (x) (* x factor)) items))
+
+(define (list-length items)
+  (if (null? items)
+      0
+      (+ 1 (list-length (cdr items)))))
+
+(define (see x)
+  (newline)
+  (display x))
 
       
+(define (for-each proc items)
+  (if (null? items)
+      (newline)
+      (and (proc (car items)) (for-each proc (cdr items)))))
+
+;;; Trees
+
+(define (count-leaves tree)
+  (cond
+   ((null? tree) 0)
+   ((not (pair? tree)) 1)
+   (else
+    (+ (count-leaves (car tree))
+       (count-leaves (cdr tree))))))
+
+(define (deep-reverse lst)
+  (define (loop acc l)
+    (if (null? l)
+        acc
+        (if (list? (car l))
+            (loop (cons (deep-reverse (car l)) acc) (cdr l))
+            (loop (cons (car l) acc) (cdr l)))))
+  (loop '() lst))
+  
+(define (append l1 l2)
+  (if (null? l1)
+      l2
+      (cons (car l1) (append (cdr l1) l2))))
+
+(define (fringe lst)
+  (cond
+   ((null? lst) '())
+   ((list? (car lst)) (append (fringe (car lst)) (fringe (cdr lst))))
+   (else (cons (car lst) (fringe (cdr lst))))))
+
+;;; Mobile representation problem
+
+;; Each mobile hast a left branch and a right branch,
+;; branches are rods of certain length,
+;; Each branch has a certain structure which can be a weight or another mobile hanging from that branch.
+
+;; Constructors
+
+(define (make-mobile left right)
+  (list left right))
+
+(define (make-branch length structure)
+  (list length structure))
+
+;; Getters
+
+(define (left-branch mobile)
+  (car mobile))
+
+(define (right-branch mobile)
+  (car (cdr mobile)))
+
+(define (branch-length branch)
+  (car branch))
+
+(define (branch-structure branch)
+  (car (cdr branch)))
+
+;; General procedures on compound Mobile structure
+
+(define (branch-weight branch)
+  (let ((struct (branch-structure branch)))
+    (if (pair? struct)
+        (total-weight struct)
+        struct)))
+
+(define (total-weight mobile)
+  (+ (branch-weight (left-branch mobile)) (branch-weight (right-branch mobile))))
+
+(define (torque? mobile)
+  (define (pseudo-torque? mob)
+    (= (* (branch-weight  (left-branch mob)) (branch-length  (left-branch mob)))
+       (* (branch-weight  (right-branch mob)) (branch-length  (right-branch mob)))))
+  (cond
+   ((not (or (pair? (branch-structure (left-branch mobile))) (pair? (branch-structure (right-branch mobile)))))
+    (pseudo-torque? mobile))
+   ((pair? (branch-structure (left-branch mobile)))
+    (and (torque? (branch-structure (left-branch mobile))) (pseudo-torque? mobile)))
+   ((pair? (branch-structure (right-branch mobile)))
+    (and (torque? (branch-structure (right-branch mobile))) (pseudo-torque? mobile)))
+   (else
+    (and (torque? (branch-structure (left-branch mobile))) (torque? (branch-structure (right-branch mobile))) (pseudo-torque? mobile)))))
+         
+   
+
+;; Testing the mobile representation
+
+(define b4 (make-branch 20 50))
+(define b3 (make-branch 20 50))
+(define m2 (make-mobile b3 b4))
+(define b1 (make-branch 20 m2))
+(define b2 (make-branch 40 50))
+(define m1 (make-mobile b1 b2))
+
+(newline)
+(display (total-weight m1))
+(newline)
+(display (torque? m1))
+
+;;; Mapping over trees
+
+;; Scale Tree
+
+(define (scale-tree tree factor)
+  (cond
+   ((null? tree) '())
+   ((not (pair? tree)) (* tree factor))
+   (else (cons (scale-tree (car tree) factor) (scale-tree (cdr tree) factor)))))
+
+;; Using map to write Scale Tree
+
+(define (scale-tree/map tree factor)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (scale-tree/map sub-tree factor)
+             (* sub-tree factor)))
+       tree))
+
+
+;; Square Tree
+
+(define (square-tree tree)
+  (cond
+   ((null? tree) '())
+   ((not (pair? tree)) (* tree tree))
+   (else (cons (square-tree (car tree)) (square-tree (cdr tree))))))
+
+;; Using map to write Scale Tree
+
+(define (square-tree/map tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (square-tree/map sub-tree)
+             (* sub-tree sub-tree)))
+       tree))
+
+;;; Abstracting out a tree-map procedure from the above examples
+
+(define (tree-map proc tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (tree-map proc sub-tree)
+             (proc sub-tree))) tree))
+
+;;; Representing sets as lists and defining a subset prcedure on a set,
+;;; which gives a list of all subsets of that set
+
+(define (subsets s)
+  (if (null? s)
+      (list '())
+      (let ((rest (subsets (cdr s))))
+        (append rest (map (lambda (set)
+                            (cons (car s) set))
+                          rest)))))
