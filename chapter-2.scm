@@ -1,4 +1,6 @@
+;;; Loading all the code in chapter-1 to reuse in this chapter :)
 
+(load "chapter-1.scm")
 
 ;;; Rational numbers data abstraction implementation (Constructor)
 
