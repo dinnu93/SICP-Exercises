@@ -246,15 +246,15 @@
 ;; Map general procedure for list transforms
 ;;   Scheme has a much more general procedure named map.
 ;;   which works with arbitrary number of list arguments
-(define (map proc items)
+(define (map/gen proc items)
   (if (null? items)
       '()
-      (cons (proc (car items)) (map proc (cdr items)))))
+      (cons (proc (car items)) (map/gen proc (cdr items)))))
 
 ;; Scale list in terms of map function
 
 (define (scale-list/map items factor)
-  (map (lambda (x) (* x factor)) items))
+  (map/gen (lambda (x) (* x factor)) items))
 
 (define (list-length items)
   (if (null? items)
@@ -383,7 +383,7 @@
 ;; Using map to write Scale Tree
 
 (define (scale-tree/map tree factor)
-  (map (lambda (sub-tree)
+  (map/gen (lambda (sub-tree)
          (if (pair? sub-tree)
              (scale-tree/map sub-tree factor)
              (* sub-tree factor)))
@@ -401,7 +401,7 @@
 ;; Using map to write Scale Tree
 
 (define (square-tree/map tree)
-  (map (lambda (sub-tree)
+  (map/gen (lambda (sub-tree)
          (if (pair? sub-tree)
              (square-tree/map sub-tree)
              (* sub-tree sub-tree)))
@@ -410,7 +410,7 @@
 ;;; Abstracting out a tree-map procedure from the above examples
 
 (define (tree-map proc tree)
-  (map (lambda (sub-tree)
+  (map/gen (lambda (sub-tree)
          (if (pair? sub-tree)
              (tree-map proc sub-tree)
              (proc sub-tree))) tree))
@@ -422,6 +422,140 @@
   (if (null? s)
       (list '())
       (let ((rest (subsets (cdr s))))
-        (append rest (map (lambda (set)
+        (append rest (map/gen (lambda (set)
                             (cons (car s) set))
                           rest)))))
+
+;;; Sequences as conventional interfaces using map, accumulate,
+;;; enumerate and filter as independent modules
+
+(define (filter predicate sequence)
+  (cond
+   ((null? sequence) '())
+   ((predicate (car sequence)) (cons (car sequence) (filter predicate (cdr sequence))))
+   (else (filter predicate (cdr sequence)))))
+      
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence) (accumulate op initial (cdr sequence)))))
+
+(define (enumerate-interval low high)
+  (if (> low high)
+      '()
+      (cons low (enumerate-interval (+ low 1) high))))
+
+(define (enumerate-trees tree)
+  (fringe tree))
+
+;;; We use the above pluggable modules to compose future programs
+
+(define (sum-odd-squares tree)
+  (accumulate + 0
+              (map/gen square
+                   (filter odd?
+                           (enumerate-trees tree)))))
+
+(define (fib n)
+  (cond
+   ((= n 0) 0)
+   ((= n 1) 1)
+   (else (+ (fib (- n 1)) (fib (- n 2))))))
+
+(define (even-fibs n)
+  (accumulate cons '()
+              (filter even?
+                      (map/gen fib
+                           (enumerate-interval 0 n)))))
+
+(define (list-fib-squares n)
+  (accumulate cons '()
+              (map/gen square
+                   (map/gen fib
+                        (enumerate-interval 0 n)))))
+
+
+;; Exercise 2.33
+
+(define (map/acc proc sequence)
+  (accumulate (lambda (x y) (cons (proc x) y))  '() sequence))
+
+(define (append/acc seq1 seq2)
+  (accumulate cons seq2 seq1))
+
+(define (length seq)
+  (accumulate (lambda (x y) (+ 1 y)) 0 seq))
+
+(define (horner-eval x coefficient-sequence)
+  (accumulate (lambda (this-coeff higher-terms)
+                (+ this-coeff (* x higher-terms)))
+              0
+              coefficient-sequence))
+
+(define (count-leaves/acc tree)
+  (accumulate (lambda (x y) (+ 1 y)) 0
+              (enumerate-trees tree)))
+
+(define (accumulate-n op init seqs)
+  (if (null? (car seqs))
+      '()
+      (cons (accumulate op init (accumulate (lambda (x y) (cons (car x) y)) '() seqs))
+            (accumulate-n op init (accumulate (lambda (x y) (cons (cdr x) y)) '() seqs)))))
+
+;;; Vector = (1 2 3) , matrix = ((1 2 3) (4 5 6) (7 8 9))
+
+;; Dot Product of two vectors
+
+(define (dot-product v w)
+  (accumulate + 0
+              (map * v w)))
+
+;;  Matrix * Vector
+
+(define (matrix-*-vector m v)
+  (map (lambda (x) (dot-product x v))  m))
+
+;; Transpose Matrix
+
+(define (transpose mat)
+  (accumulate-n cons '() mat)) 
+
+;; Matrix Multiplication
+
+(define (matrix-*-matrix m n)
+  (let ((cols (transpose n)))
+    (map (lambda (x)
+           (matrix-*-vector cols x))
+         m)))
+  
+
+;; Accumulate is also called a fold-right and there is also a fold-left (I used a similar method for reverse-list)
+
+(define (fold-left op initial seq)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op result (car rest)) (cdr rest))))
+  (iter initial seq))
+
+(define (reverse/fl seq)
+  (fold-left (lambda (x y) (cons y x)) '() seq))
+
+(define (reverse/acc seq)
+  (accumulate (lambda (x y) (append y (list x))) '() seq))
+
+;;; Nested Mappings
+
+(define (per n)
+  (accumulate append '()
+              (map (lambda (i)
+                     (map (lambda (j)
+                            (list i j))
+                          (enumerate-interval 1 (- i 1))))
+                   (enumerate-interval 1 n))))
+                     
+(define (flatmap proc seq)
+  (accumulate append '() (map proc seq)))
+
+(define (prime-sum? pair)
+  (prime? (+ (car pair) (cadr pair))))
