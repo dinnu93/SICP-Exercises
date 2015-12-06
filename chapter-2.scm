@@ -554,10 +554,70 @@
                      (map (lambda (j)
                             (list i j))
                           (enumerate-interval 1 (- i 1))))
-                   (enumerate-interval 1 n))))
+                   (enumerate-interval 2 n))))
                      
 (define (flatmap proc seq)
   (accumulate append '() (map proc seq)))
 
 (define (prime-sum? pair)
   (prime? (+ (car pair) (cadr pair))))
+
+(define (make-pair-sum pair)
+  (list (car pair) (cadr pair) (+ (car pair) (cadr pair))))
+
+;; By removing 1 in the enumerate-interval and put 2 in the answer given in the book
+;; We can make the unique pair procedure in Ex: 2.40
+
+(define (prime-sum-pairs n)
+  (map make-pair-sum
+       (filter prime-sum?
+               (flatmap
+                (lambda (i)
+                  (map (lambda (j) (list i j))
+                       (enumerate-interval 1 (- i 1))))
+                (enumerate-interval 2 n)))))
+
+;;; Exercise 2.41
+;; (i, j, k) | i + j + k = s | i,j,k <= n
+(define (sum-eq-s? triple s)
+  (= (+ (car triple) (cadr triple) (caddr triple)) s))
+
+(define (triple-sum s n)
+  (filter (lambda (x) (sum-eq-s? x s))
+            (flatmap
+             (lambda (i)
+               (map (lambda (j)
+                      (map (lambda (k) (list i j k))
+                           (enumerate-interval 1 (- j 1))))
+                    (enumerate-interval 1 (- i 1))))
+             (enumerate-interval 1 n))))
+                      
+;;; Lab-13 External exercise 
+
+(define (sorted? lst)
+  (cond
+   ((null? lst) #t)
+   ((null? (cdr lst)) #t)
+   (else (and (<= (car lst) (cadr lst)) (sorted? (cdr lst))))))
+ 
+(define (insert num lst)
+  (cond
+   ((null? lst) (list num))
+   ((<= num (car lst)) (cons num lst))
+   (else (cons (car lst) (insert num (cdr lst))))))
+
+(define (insert-sort lst)
+  (define (loop result ls)
+    (if (null? ls)
+        result
+        (loop (insert (car ls) result) (cdr ls))))
+  (loop '() lst))
+
+(define (merge lst1 lst2)
+  (define (loop result ls)
+    (if (null? ls)
+        result
+        (loop (insert (car ls) result) (cdr ls))))
+  (loop lst1 lst2))
+
+;;; 
