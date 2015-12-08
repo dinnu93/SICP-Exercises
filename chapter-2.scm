@@ -548,6 +548,7 @@
 
 ;;; Nested Mappings
 
+;; Produces a pair of distinct numbers below n
 (define (per n)
   (accumulate append '()
               (map (lambda (i)
@@ -555,7 +556,18 @@
                             (list i j))
                           (enumerate-interval 1 (- i 1))))
                    (enumerate-interval 2 n))))
-                     
+
+;; Produces a triplet of distinct numbers below n
+(define (three-per n)
+  (accumulate append '()
+              (accumulate append '()
+                          (map (lambda (i)
+                                 (map (lambda (j)
+                                        (map (lambda (k)
+                                               (list i j k)) (enumerate-interval 1 (- j 1))))
+                                      (enumerate-interval 1 (- i 1))))
+                               (enumerate-interval 2 n)))))
+  
 (define (flatmap proc seq)
   (accumulate append '() (map proc seq)))
 
@@ -583,14 +595,7 @@
   (= (+ (car triple) (cadr triple) (caddr triple)) s))
 
 (define (triple-sum s n)
-  (filter (lambda (x) (sum-eq-s? x s))
-            (flatmap
-             (lambda (i)
-               (map (lambda (j)
-                      (map (lambda (k) (list i j k))
-                           (enumerate-interval 1 (- j 1))))
-                    (enumerate-interval 1 (- i 1))))
-             (enumerate-interval 1 n))))
+  (filter (lambda (x) (sum-eq-s? x s)) (three-per n)))
                       
 ;;; Lab-13 External exercise 
 
@@ -620,4 +625,6 @@
         (loop (insert (car ls) result) (cdr ls))))
   (loop lst1 lst2))
 
-;;; 
+;;; Eight Queens Puzzle
+
+
