@@ -625,6 +625,114 @@
         (loop (insert (car ls) result) (cdr ls))))
   (loop lst1 lst2))
 
-;;; Eight Queens Puzzle
+;;; Eight Queens Puzzle - (Will Do Later)
 
 
+;;; Painter problems solved on the fly on interpreter,
+;;; But I felt cheated they still didn't show me how to do GUI programming in Scheme.
+
+;;; (memq '(a b c) 'b) == '(b c)
+
+(define (memq ls x)
+  (cond
+   ((null? ls) false)
+   ((eq? x (car ls)) ls)
+   (else (memq (cdr ls) x))))
+
+;;; (equal? '(a b c) '(a b c)) == #t
+
+(define (equal? x y)
+  (cond
+   ((or (eq? '() x) (eq? '() y)) (eq? x y))
+   ((eq? (car x) (car y)) (equal? (cdr x) (cdr y)))
+   (else #f)))
+
+;;; Symbolic Differentiation
+
+(define (variable? x) (symbol? x))
+
+(define (same-variable? v1 v2)
+  (and (variable? v1) (variable? v2) (eq? v1 v2)))
+
+;; Sum data abstractions
+
+(define (make-sum e1 e2)
+  (cond
+   ((=number? e1 0) e2)
+   ((=number? e2 0) e1)
+   ((and (number? e1) (number? e2)) (+ e1 e2))
+   (else (list '+ e1 e2))))
+
+(define (sum? e)
+  (and (pair? e) (eq? (car e) '+)))
+
+(define (addend e)
+  (cadr e))
+
+(define (augend e)
+  (caddr e))
+
+;; Product data abstractions
+
+(define (make-product e1 e2)
+  (cond
+   ((or (=number? e1 0) (=number? e2 0)) 0)
+   ((=number? e1 1) e2)
+   ((=number? e2 1) e1)
+   ((and (number? e1) (number? e2)) (* e1 e2))
+   (else (list '* e1 e2))))
+
+(define (product? e)
+  (and (pair? e) (eq? (car e) '*)))
+
+(define (multiplier e)
+  (cadr e))
+
+(define (multiplicand e)
+  (caddr e))
+
+;; Exponentiation data abstractions
+
+(define (make-exponent base exp)
+  (cond
+   ((=number? exp 0) 1)
+   ((=number? exp 1) base)
+   ((and (number? base) (number? exp)) (exponent base exp))
+   (else (list '** base exp))))
+
+(define (exponent? e)
+  (and (pair? e) (eq? (car e) '**)))
+
+(define (base e)
+  (cadr e))
+
+(define (expn e)
+  (caddr e))
+
+;; Differentiation
+
+(define (deriv exp var)
+  (cond
+   ((number? exp) 0)
+   ((variable? exp)
+    (if (same-variable? exp var) 1 0))
+   ((sum? exp)
+    (make-sum (deriv (addend exp) var)
+              (deriv (augend exp) var)))
+   ((product? exp)
+    (make-sum
+     (make-product (multiplier exp)
+                   (deriv (multiplicand exp) var))
+     (make-product (multiplicand exp)
+                   (deriv (multiplier exp) var))))
+   ((exponent? exp)
+    (make-product (expn exp)
+                  (make-exponent (base exp) (- (expn exp)  1))))
+   (else
+    (error "unknown expression type -- DERIV" exp))))
+                   
+;; Helper Functions
+
+(define (=number? exp num)
+  (and (number? exp) (= exp num)))
+   
