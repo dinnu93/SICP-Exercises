@@ -661,6 +661,7 @@
    ((=number? e1 0) e2)
    ((=number? e2 0) e1)
    ((and (number? e1) (number? e2)) (+ e1 e2))
+   ((sum? e2) (append (list '+ e1) (cdr e2)))
    (else (list '+ e1 e2))))
 
 (define (sum? e)
@@ -670,7 +671,9 @@
   (cadr e))
 
 (define (augend e)
-  (caddr e))
+  (if (null? (cdddr e))
+      (caddr e)
+      (cons '+ (cddr e))))
 
 ;; Product data abstractions
 
@@ -680,6 +683,7 @@
    ((=number? e1 1) e2)
    ((=number? e2 1) e1)
    ((and (number? e1) (number? e2)) (* e1 e2))
+   ((product? e2) (append (list '* e1) (cdr e2)))
    (else (list '* e1 e2))))
 
 (define (product? e)
@@ -689,7 +693,9 @@
   (cadr e))
 
 (define (multiplicand e)
-  (caddr e))
+  (if (null? (cdddr e))
+      (caddr e)
+      (cons '* (cddr e))))
 
 ;; Exponentiation data abstractions
 
