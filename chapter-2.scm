@@ -742,3 +742,9 @@
 (define (=number? exp num)
   (and (number? exp) (= exp num)))
    
+
+
+;;; Representing Sets
+
+;; Sets can be represented as list of objects where each object is either an atomic entity or another set.
+
