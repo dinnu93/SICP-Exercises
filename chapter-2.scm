@@ -746,5 +746,60 @@
 
 ;;; Representing Sets
 
-;; Sets can be represented as list of objects where each object is either an atomic entity or another set.
+;; Sets can be represented as list of objects,
+;; Where each object is either an atomic entity or another set.
 
+;; Sets as unordered lists
+
+;; set x = '(1 9 3 2 5)
+
+;; Sets are defined on some operations on set
+
+;; Checking if x is an element of set
+
+(define (element-of-set? x set)
+  (cond
+   ((null? set) #f)
+   ((= (car set) x) #t)
+   (else (element-of-set? x (cdr set)))))
+
+;; Adjoining an element to the set
+
+(define (adjoin-set x set)
+  (if (element-of-set? x set)
+      set
+      (cons x set)))
+
+;; Intersection of two sets
+
+(define (intersection-set set1 set2)
+  (filter (lambda (x) (element-of-set? x set2))
+          set1))
+
+;; Union of two sets Ex: 2.59
+
+(define (union-set set1 set2)
+  (accumulate cons set2 (filter (lambda (x) (not (element-of-set? x set2))) set1)))
+
+;; Duplicates allowed Ex: 2.60 totally non-sensical question if duplicates are allowed they are not sets
+
+;; Union will be append  and intersection and element-of-set is same,
+;; adjoin-set is totally meaningless just add an element even if it there or not.
+
+;; Sets as ordered list to increase efficiency
+
+;; set x = '(1 2 3)
+
+(define (element-of-set? x set)
+  (cond
+   ((null? set) #f)
+   ((= x (car set)) #t)
+   ((< x (car set)) #f)
+   (else (element-of-set? x (cdr set)))))
+
+(define (adjoin-set x set)
+  (cond
+   ((null? set) (list x))
+   ((= x (car set)) set)
+   ((< x (car set)) (cons x set))
+   (else (cons (car set) (adjoin-set x (cdr set))))))
